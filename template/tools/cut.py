@@ -6,7 +6,7 @@ Footage never passes through the browser. Per segment:
   light luma-only unsharp, x264 CRF 12 intermediate.
 Segments are cached in work/seg/ by (source, in-point, frame count) and shared by all variants.
 Usage: [CUT=tiktok] python tools/cut.py"""
-import os, subprocess, sys
+import hashlib, os, subprocess, sys
 from concurrent.futures import ThreadPoolExecutor
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -17,13 +17,26 @@ os.makedirs(SEG_DIR, exist_ok=True)
 tl, total = timeline()
 VF = (f"fps={FPS},scale={W}:{H}:force_original_aspect_ratio=increase:flags=lanczos+accurate_rnd+full_chroma_int,"
       f"crop={W}:{H},unsharp=5:5:0.45:5:5:0.0,setsar=1,format=yuv420p")
-ENC = ["-c:v", "libx264", "-preset", "slow", "-crf", "12", "-profile:v", "high", "-r", str(FPS), "-an"]
+# HDR phone footage (iPhone HLG, Android HDR10) -> SDR bt709 before scaling, or it looks grey and washed out
+TONEMAP = ("zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=hable:desat=0,"
+           "zscale=t=bt709:m=bt709:r=tv,format=yuv420p10le,")
+HDR_TRC = ("arib-std-b67", "smpte2084")
+ENC = ["-c:v", "libx264", "-preset", "slow", "-crf", "12", "-profile:v", "high", "-r", str(FPS), "-an",
+       "-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709"]
+
+
+def probe(path, entries, stream="v:0"):
+    r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", stream, "-show_entries", entries,
+                        "-of", "csv=p=0", path], capture_output=True, text=True)
+    return r.stdout.strip()
 
 
 def src_dur(path):
-    r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", path],
-                       capture_output=True, text=True)
-    return float(r.stdout.strip() or 0)
+    return float(probe(path, "format=duration") or 0)
+
+
+def vf_for(path):
+    return (TONEMAP + VF) if probe(path, "stream=color_transfer") in HDR_TRC else VF
 
 
 # fail early: an in-point + duration past the end of a source would silently shorten the whole cut
@@ -31,12 +44,17 @@ bad = [f'{s["id"]}: src {s["src"]} is {d:.2f}s, segment wants {s["inn"]:.2f}+{s[
        for s in tl if s["src"] for d in [src_dur(SRC[s["src"]])] if s["inn"] + s["dur"] > d - 0.02]
 if bad:
     sys.exit("segments run past the end of their source:\n  " + "\n  ".join(bad))
+for sid in sorted({s["src"] for s in tl if s["src"]}):
+    if probe(SRC[sid], "stream=color_transfer") in HDR_TRC:
+        print(f"  HDR source {sid} -> tone-mapped to SDR bt709")
 
 
 def one(s):
     n = round(s["dur"] * FPS)
     name = os.path.splitext(os.path.basename(SRC[s["src"]]))[0] if s["src"] else "black"
-    dst = os.path.join(SEG_DIR, f'{name}_{s["inn"]:.2f}_{n}_{W}x{H}.mp4')
+    vf = vf_for(SRC[s["src"]]) if s["src"] else "black"
+    tag = hashlib.md5(f"{vf}|{ENC}".encode()).hexdigest()[:8]   # editing VF/ENC invalidates the cache
+    dst = os.path.join(SEG_DIR, f'{name}_{s["inn"]:.2f}_{n}_{W}x{H}_{tag}.mp4')
     s["file"] = dst
     if os.path.exists(dst) and os.path.getsize(dst) > 0:
         return s["id"], n, "cached"
@@ -45,7 +63,7 @@ def one(s):
                "-frames:v", str(n), "-vf", "format=yuv420p", *ENC, dst + ".part.mp4"]
     else:
         cmd = ["ffmpeg", "-v", "error", "-y", "-ss", f'{s["inn"]:.3f}', "-i", SRC[s["src"]],
-               "-frames:v", str(n), "-vf", VF, *ENC, dst + ".part.mp4"]
+               "-frames:v", str(n), "-vf", vf, *ENC, dst + ".part.mp4"]
     subprocess.run(cmd, check=True)
     got = int(subprocess.run(["ffprobe", "-v", "error", "-count_frames", "-select_streams", "v:0", "-show_entries",
                               "stream=nb_read_frames", "-of", "csv=p=0", dst + ".part.mp4"], capture_output=True, text=True).stdout.strip() or 0)

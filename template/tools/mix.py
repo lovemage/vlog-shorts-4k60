@@ -12,11 +12,11 @@ Usage: [CUT=tiktok] python tools/mix.py"""
 import json, os, subprocess, sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
-from edl import timeline, SRC, AUDIO, WORK
+from edl import timeline, SRC, AUDIO, WORK, VARIANT
 
 # ---------------------------------------------------------------- settings
 BGM = os.path.join(ROOT, "assets", "music", "bgm.wav")
-BGM_IN = 0.0          # seconds into the music file where the cut starts (pick it so the ending lines up)
+BGM_IN = VARIANT.get("bgm_in")   # per variant in edl.py; None = auto (music ends on the last frame)
 BGM_VOL = 0.55
 TARGET_LUFS = -14.0   # YouTube reference level; louder channels often sit around -13 .. -12.5
 WHOOSH = (os.path.join(ROOT, "assets", "sfx", "whoosh.wav"), 0.55)
@@ -24,13 +24,25 @@ POP = (os.path.join(ROOT, "assets", "sfx", "pop.wav"), 0.315)
 
 tl, TOTAL = timeline()
 SEG = {s["id"]: s for s in tl}
+_has_audio = {}
+
+
+def has_audio(sid):
+    if sid not in _has_audio:
+        r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=index",
+                            "-of", "csv=p=0", SRC[sid]], capture_output=True, text=True)
+        _has_audio[sid] = bool(r.stdout.strip())
+        if not _has_audio[sid]:
+            print(f"  ! source {sid} has no audio track -- its sound is skipped")
+    return _has_audio[sid]
+
 
 events = []  # (path, in, dur, at, volume, bus)
 for s in tl:
-    if s["src"] and s["vol"] > 0:
+    if s["src"] and s["vol"] > 0 and has_audio(s["src"]):
         events.append((SRC[s["src"]], s["inn"], s["dur"], s["start"], s["vol"], "dlg" if s["vol"] >= 1 else "amb"))
 for src, a, d, seg, off, v in AUDIO:
-    if seg in SEG:
+    if seg in SEG and has_audio(src):
         events.append((SRC[src], a, d, SEG[seg]["start"] + off, v, "dlg"))
 
 vs_p, vt_p = os.path.join(ROOT, "vo", "script.json"), os.path.join(ROOT, "vo", "timeline.json")
@@ -83,6 +95,13 @@ bus("amb")
 bus("fx")
 outs = ["[dlgA]", "[amb]", "[fx]"]
 if os.path.exists(BGM):
+    bgm_dur = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", BGM],
+                                   capture_output=True, text=True).stdout.strip() or 0)
+    if BGM_IN is None:
+        BGM_IN = max(0.0, round(bgm_dur - TOTAL, 3))
+    if bgm_dur - BGM_IN < TOTAL - 0.05:
+        print(f"  ! BGM has {bgm_dur - BGM_IN:.1f}s after bgm_in={BGM_IN}, video is {TOTAL:.1f}s -- the end will be silent")
+    print(f"  BGM from {BGM_IN:.2f}s of {bgm_dur:.1f}s")
     args += ["-ss", f"{BGM_IN}", "-t", f"{TOTAL:.3f}", "-i", BGM]
     fc.append(f"[{k}:a]aresample=48000,aformat=channel_layouts=stereo,volume={BGM_VOL},afade=t=in:d=0.25,"
               f"afade=t=out:st={max(0, TOTAL - 1.2):.3f}:d=1.2,apad,atrim=0:{TOTAL:.3f}[bgm0]")
@@ -101,6 +120,11 @@ r = subprocess.run(["ffmpeg", "-hide_banner", "-nostats", "-i", pre, "-af",
                     f"loudnorm=I={TARGET_LUFS}:TP=-1.0:LRA=7:print_format=json", "-f", "null", "-"],
                    capture_output=True, text=True).stderr
 mj = json.loads(r[r.rindex("{"):r.rindex("}") + 1])
+if mj["input_i"] in ("-inf", "inf") or "inf" in str(mj["input_tp"]):
+    print("  ! the mix is silent -- skipping loudness normalisation")
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", pre, "-c:a", "pcm_s24le", "-ar", "48000",
+                    os.path.join(WORK, "mix.wav")], check=True)
+    sys.exit()
 af = (f"loudnorm=I={TARGET_LUFS}:TP=-1.0:LRA=7:measured_I={mj['input_i']}:measured_TP={mj['input_tp']}:"
       f"measured_LRA={mj['input_lra']}:measured_thresh={mj['input_thresh']}:offset={mj['target_offset']}:linear=true,"
       "aresample=48000,alimiter=limit=0.89:level=false")

@@ -48,7 +48,12 @@ def langs(t, cls=("l1", "l2", "l3"), split=False):
 
 
 # ---------------------------------------------------------------- cues
-SUBS = [(at(sg, off), d, t, False) for sg, off, d, t in C.SUBS]
+SUBS = []
+for sg, off, d, t in C.SUBS:
+    if sg in SEG:
+        SUBS.append((at(sg, off), d, t, False))
+    else:
+        print(f"  - subtitle {t[0][:16]!r} skipped (segment {sg} not in CUT={CUT})")
 VOS = []
 vs_p, vt_p = os.path.join(ROOT, "vo", "script.json"), os.path.join(ROOT, "vo", "timeline.json")
 if os.path.exists(vs_p) and os.path.exists(vt_p):
@@ -148,6 +153,9 @@ def clip(t, d, cls, inner, track):
 
 
 H = C.HOOK
+if H and H["until"] not in SEG:
+    print(f"  - hook skipped (segment {H['until']} not in CUT={CUT})")
+    H = None
 if H:
     hd = at(H["until"])
     parts.append(clip(0.15, hd - 0.25, "hook", (
@@ -166,7 +174,7 @@ for t, d, kind, txt, note in TAGS:
     parts.append(clip(t, d, "tagwrap", '<div class="tag%s in"><div class="k alt">%s</div>%s%s</div>'
                       % (" bonus" if kind == "bonus" else "", e(C.KINDS[kind]), langs(txt), nt), 20))
 
-if C.DATE_STICKER and C.DATE_STICKER[0] in SEG:
+if C.DATE_STICKER and C.DATE_STICKER[0] in SEG and C.DATE_STICKER[1] in SEG:
     a_, b_, (a, b, c) = C.DATE_STICKER
     t, d = span(a_, b_)
     parts.append(clip(t + 0.3, d - 0.4, "datestk",
