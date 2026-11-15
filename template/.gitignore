@@ -1,0 +1,8 @@
+work/
+renders/
+vo/cache/
+vo/norm/
+assets/preview/
+assets/fonts/*-sub.ttf
+.env
+__pycache__/
