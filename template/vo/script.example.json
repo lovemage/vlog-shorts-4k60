@@ -1,0 +1,16 @@
+[
+ {
+  "id": "V0",
+  "seg": "h1",
+  "off": 0.25,
+  "say": "清邁一年只有九天的市集！",
+  "sub": ["清邁一年只有九天的市集！", "A Chiang Mai fair that runs just 9 days a year!", "งานที่เชียงใหม่ จัดปีละแค่ 9 วัน!"]
+ },
+ {
+  "id": "V1",
+  "seg": "f1",
+  "off": 0.1,
+  "say": "先從吃的開始！泰式烤蛋、竹筒糯米飯，一路排開。",
+  "sub": ["先從吃的開始！|烤蛋、竹筒糯米飯一路排開", "Food first! Grilled eggs, bamboo sticky rice, stall after stall.", "เริ่มจากของกิน! ไข่ปิ้ง ข้าวหลาม เรียงยาวเต็มไปหมด"]
+ }
+]
