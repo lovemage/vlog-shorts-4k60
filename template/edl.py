@@ -16,8 +16,9 @@ TITLE = "my-vlog"                                # used for render file names
 
 # Output file per variant (written to renders/)
 VARIANTS = {
-    "shorts": {"file": f"{TITLE}_Shorts_4K60.mp4"},
-    "tiktok": {"file": f"{TITLE}_TikTok_4K60.mp4",
+    # bgm_in: seconds into the music where this cut starts; None = auto, so the track's ending lands on the last frame
+    "shorts": {"file": f"{TITLE}_Shorts_4K60.mp4", "bgm_in": None},
+    "tiktok": {"file": f"{TITLE}_TikTok_4K60.mp4", "bgm_in": None,
                # longer cut: insert extra stable shots AFTER a given id, or change lengths
                "insert_after": {
                    # "f2": [("f2b", "food", "05", 1.00, 1.40, 0.3)],
@@ -64,6 +65,9 @@ WORK = os.path.join(ROOT, "work", CUT)
 os.makedirs(WORK, exist_ok=True)
 
 _ins, _len = VARIANT.get("insert_after", {}), VARIANT.get("length", {})
+_unknown = (set(_ins) | set(_len)) - {s[0] for s in SEGS}
+if _unknown:
+    sys.exit(f"VARIANTS[{CUT!r}] refers to unknown segment ids: {sorted(_unknown)}")
 if _ins or _len:
     _new = []
     for _s in SEGS:
@@ -83,6 +87,7 @@ def timeline():
         seen.add(sid)
         if src is not None and src not in SRC:
             sys.exit(f"segment {sid}: unknown source id {src} (have {len(SRC)} files in {SRC_DIR})")
+        d = round(d * OUT_FPS) / OUT_FPS          # snap to the frame grid so picture, captions and audio agree
         out.append(dict(id=sid, sec=sec, src=src, inn=a, dur=d, vol=vol, start=round(t, 4)))
         t += d
     return out, round(t, 4)
