@@ -76,7 +76,7 @@ flowchart LR
 
 ## Inicio rápido
 
-Necesitas ffmpeg, Python 3.10+ (`pip install opencv-python numpy fonttools`) y Node 20+. La clave de fal.ai es opcional y se usa para la narración y la música.
+Necesitas ffmpeg, Python 3.10+ (`pip install opencv-python numpy fonttools`) y Node 20+. La clave de fal.ai es opcional y se usa para la narración y la música. En macOS/Linux, usa `python3` donde los comandos dicen `python`.
 
 ```bash
 # 1. Copia la plantilla dentro de la carpeta de clips (la plantilla busca los clips en la carpeta superior)
@@ -91,12 +91,13 @@ python tools/shake.py
 #    (o genérala con: FAL_KEY=... python tools/gen_audio.py)
 
 # 4. Opcional: narración con tu voz
+cp vo/script.example.json vo/script.json   # luego escribe tu propio guion
 VOICE_ID=your_minimax_voice_id FAL_KEY=... python tools/make_vo.py
 
 # 5. Vista previa
 python tools/cut.py && python tools/build_overlay.py && python tools/subset_font.py \
   && python tools/mix.py && python tools/proxy.py
-npx hyperframes preview
+npx --yes hyperframes@0.8.141 preview
 
 # 6. Renderiza todas las versiones
 bash tools/render_all.sh            # o: bash tools/render_all.sh shorts
@@ -107,7 +108,7 @@ El resultado queda en `renders/<title>_Shorts_4K60.mp4` y `renders/<title>_TikTo
 ## Usarlo como skill de Claude Code
 
 ```bash
-git clone https://github.com/<you>/vlog-shorts-4k60 ~/.claude/skills/vlog-shorts-4k60
+git clone https://github.com/lovemage/vlog-shorts-4k60 ~/.claude/skills/vlog-shorts-4k60
 ```
 
 Luego pídele a Claude algo como «monta los clips de esta carpeta en un Short 4K60 con subtítulos en chino, inglés y tailandés». Claude sigue los 12 pasos de [`SKILL.md`](SKILL.md): brief → investigar el lugar → registro de tomas → análisis de vibración → EDL → narración → subtítulos → música → fuentes → vista previa → render → texto de publicación y portada.
@@ -132,7 +133,7 @@ docs/images/             imágenes del README
 
 - `cut.py` se detiene si el punto de entrada más la duración de un segmento pasa del final de su clip. Si no, el vídeo se acortaría sin avisar y todos los subtítulos y el audio quedarían desfasados.
 - `build_overlay.py` avisa cuando dos subtítulos se solapan.
-- Las claves de API y el ID de voz se leen solo de variables de entorno. `.gitignore` excluye `work/`, `renders/`, la caché de voz y `.env`.
+- Las claves de API y el ID de voz se leen de variables de entorno (o de un `.env` ignorado por git). `.gitignore` excluye `work/`, `renders/`, la caché de voz y `.env`.
 
 ## Licencia
 

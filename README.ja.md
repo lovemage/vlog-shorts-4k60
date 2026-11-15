@@ -76,7 +76,7 @@ flowchart LR
 
 ## クイックスタート
 
-必要なもの：ffmpeg、Python 3.10 以上（`pip install opencv-python numpy fonttools`）、Node 20 以上。ナレーションと BGM を使う場合は fal.ai のキーも必要です（任意）。
+必要なもの：ffmpeg、Python 3.10 以上（`pip install opencv-python numpy fonttools`）、Node 20 以上。ナレーションと BGM を使う場合は fal.ai のキーも必要です（任意）。macOS／Linux ではコマンドの `python` を `python3` に置き換えてください。
 
 ```bash
 # 1. テンプレートを素材フォルダの中にコピー（素材は 1 つ上のフォルダにある前提）
@@ -91,12 +91,13 @@ python tools/shake.py
 #    （または FAL_KEY=... python tools/gen_audio.py で生成）
 
 # 4. 任意：自分の声のナレーション
+cp vo/script.example.json vo/script.json   # 自分の原稿に書き換える
 VOICE_ID=your_minimax_voice_id FAL_KEY=... python tools/make_vo.py
 
 # 5. プレビュー
 python tools/cut.py && python tools/build_overlay.py && python tools/subset_font.py \
   && python tools/mix.py && python tools/proxy.py
-npx hyperframes preview
+npx --yes hyperframes@0.8.141 preview
 
 # 6. 全バージョンを書き出し
 bash tools/render_all.sh            # または: bash tools/render_all.sh shorts
@@ -107,7 +108,7 @@ bash tools/render_all.sh            # または: bash tools/render_all.sh shorts
 ## Claude Code の skill として使う
 
 ```bash
-git clone https://github.com/<you>/vlog-shorts-4k60 ~/.claude/skills/vlog-shorts-4k60
+git clone https://github.com/lovemage/vlog-shorts-4k60 ~/.claude/skills/vlog-shorts-4k60
 ```
 
 あとは Claude に「このフォルダの素材を 4K60 の Shorts にして。字幕は中国語・英語・タイ語で」のように頼むと、[`SKILL.md`](SKILL.md) の 12 ステップで進めます：ブリーフ → 場所の下調べ → 素材チェック → 手ブレ解析 → EDL → ナレーション → 字幕 → BGM → フォント → プレビュー → 書き出し → 投稿テキストとサムネイル。
@@ -132,7 +133,7 @@ docs/images/             README の画像
 
 - `cut.py` は、各セグメントのイン点と長さの合計が元クリップの長さを超えていないかを最初に確認します。超えたままだと動画全体が気づかないうちに短くなり、字幕と音声がすべてずれてしまいます。
 - `build_overlay.py` は字幕の重なりを警告します。
-- API キーとボイス ID は環境変数からだけ読み込みます。`.gitignore` で `work/`、`renders/`、ナレーションのキャッシュ、`.env` を除外しています。
+- API キーとボイス ID は環境変数（または gitignore 済みの `.env`）から読み込みます。`.gitignore` で `work/`、`renders/`、ナレーションのキャッシュ、`.env` を除外しています。
 
 ## ライセンス
 

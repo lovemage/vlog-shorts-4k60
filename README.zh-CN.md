@@ -76,7 +76,7 @@ flowchart LR
 
 ## 快速开始
 
-需要：ffmpeg、Python 3.10 以上（`pip install opencv-python numpy fonttools`）、Node 20 以上。旁白和配乐需要 fal.ai key，可选。
+需要：ffmpeg、Python 3.10 以上（`pip install opencv-python numpy fonttools`）、Node 20 以上。旁白和配乐需要 fal.ai key，可选。macOS／Linux 请把命令中的 `python` 换成 `python3`。
 
 ```bash
 # 1. 把模板复制到素材文件夹里（默认素材在上一层）
@@ -91,12 +91,13 @@ python tools/shake.py
 #    （或用 FAL_KEY=... python tools/gen_audio.py 生成）
 
 # 4. 可选：本人声音旁白
+cp vo/script.example.json vo/script.json   # 再改成你自己的旁白稿
 VOICE_ID=your_minimax_voice_id FAL_KEY=... python tools/make_vo.py
 
 # 5. 预览
 python tools/cut.py && python tools/build_overlay.py && python tools/subset_font.py \
   && python tools/mix.py && python tools/proxy.py
-npx hyperframes preview
+npx --yes hyperframes@0.8.141 preview
 
 # 6. 输出所有版本
 bash tools/render_all.sh            # 或: bash tools/render_all.sh shorts
@@ -107,7 +108,7 @@ bash tools/render_all.sh            # 或: bash tools/render_all.sh shorts
 ## 作为 Claude Code skill 使用
 
 ```bash
-git clone https://github.com/<you>/vlog-shorts-4k60 ~/.claude/skills/vlog-shorts-4k60
+git clone https://github.com/lovemage/vlog-shorts-4k60 ~/.claude/skills/vlog-shorts-4k60
 ```
 
 之后对 Claude 说“把这个文件夹的素材剪成 4K60 Shorts，中英泰字幕”，它就会按照 [`SKILL.md`](SKILL.md) 的 12 个步骤进行：brief → 调研地点 → 素材分析 → 抖动检测 → 剪辑表 → 旁白 → 字幕 → 配乐 → 字体 → 预览 → 输出 → 文案与封面。
@@ -132,7 +133,7 @@ docs/images/             README 图片
 
 - `cut.py` 会先检查每个片段的入点加时长有没有超过素材本身的长度。超过的话整支视频会悄悄变短，字幕和音轨也会全部错位。
 - `build_overlay.py` 会警告重叠的字幕。
-- 密钥和声音 ID 只从环境变量读取，`.gitignore` 已经排除 `work/`、`renders/`、旁白缓存和 `.env`。
+- 密钥和声音 ID 从环境变量（或已被 gitignore 的 `.env`）读取，`.gitignore` 已经排除 `work/`、`renders/`、旁白缓存和 `.env`。
 
 ## 许可
 

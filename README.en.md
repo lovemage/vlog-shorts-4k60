@@ -76,7 +76,7 @@ flowchart LR
 
 ## Quick start
 
-You need ffmpeg, Python 3.10+ (`pip install opencv-python numpy fonttools`) and Node 20+. A fal.ai key is optional; it's used for narration and music.
+You need ffmpeg, Python 3.10+ (`pip install opencv-python numpy fonttools`) and Node 20+. A fal.ai key is optional; it's used for narration and music. On macOS/Linux, use `python3` wherever the commands say `python`.
 
 ```bash
 # 1. Copy the template next to your clips (the template looks for clips in its parent folder)
@@ -91,12 +91,13 @@ python tools/shake.py
 #    (or generate it: FAL_KEY=... python tools/gen_audio.py)
 
 # 4. Optional: narration in your voice
+cp vo/script.example.json vo/script.json   # then write your own lines
 VOICE_ID=your_minimax_voice_id FAL_KEY=... python tools/make_vo.py
 
 # 5. Preview
 python tools/cut.py && python tools/build_overlay.py && python tools/subset_font.py \
   && python tools/mix.py && python tools/proxy.py
-npx hyperframes preview
+npx --yes hyperframes@0.8.141 preview
 
 # 6. Render every variant
 bash tools/render_all.sh            # or: bash tools/render_all.sh shorts
@@ -107,7 +108,7 @@ The output goes to `renders/<title>_Shorts_4K60.mp4` and `renders/<title>_TikTok
 ## Use it as a Claude Code skill
 
 ```bash
-git clone https://github.com/<you>/vlog-shorts-4k60 ~/.claude/skills/vlog-shorts-4k60
+git clone https://github.com/lovemage/vlog-shorts-4k60 ~/.claude/skills/vlog-shorts-4k60
 ```
 
 Then ask Claude something like "cut the clips in this folder into a 4K60 Short with Chinese/English/Thai subtitles". It follows the 12 steps in [`SKILL.md`](SKILL.md): brief → research the place → shot log → shake scan → EDL → narration → captions → music → fonts → preview → render → upload text and cover.
@@ -132,7 +133,7 @@ docs/images/             README images
 
 - `cut.py` stops if a segment's in-point plus its duration runs past the end of its source clip. Otherwise the cut would get shorter without any warning, and every caption and audio cue would drift.
 - `build_overlay.py` warns when subtitles overlap.
-- API keys and voice IDs are read only from environment variables. `.gitignore` excludes `work/`, `renders/`, the voice cache and `.env`.
+- API keys and voice IDs come from environment variables (or a git-ignored `.env`). `.gitignore` excludes `work/`, `renders/`, the voice cache and `.env`.
 
 ## License
 

@@ -22,7 +22,7 @@ Text is never sharpened or upscaled; footage is never re-rendered by a browser.
 
 ## Requirements
 
-ffmpeg/ffprobe, Python 3.10+ with `opencv-python numpy fonttools`, Node 20+ (for `npx hyperframes`).
+ffmpeg/ffprobe (with zscale for HDR sources), Python 3.10+ (`python3` on macOS/Linux) with `opencv-python numpy fonttools`, Node 20+ (for `npx hyperframes`).
 Optional: fal.ai key (`FAL_KEY`) for BGM/SFX and cloned-voice narration. If the HyperFrames skills are
 installed, read `/hyperframes` and `/hyperframes-core` before editing composition HTML.
 
@@ -40,7 +40,8 @@ variant in `edl.py`), keeps its files in `work/<CUT>/`, and shares the segment c
    officially published, leave it out. Details: `references/research-and-info.md`.
 3. **Shot log.** `python edl.py --sources`, ffprobe every clip, look at 2–3 frames per clip, and write
    `影片素材初步分析.md`: resolution, fps, length, content, speech, duplicates. Mark landscape and
-   60/120 fps clips. **Tell the user if the sources are only 1080p or soft.** The output is still 4K,
+   60/120 fps clips. Note HDR clips (HLG/HDR10). `cut.py` tone-maps them to SDR.
+   **Tell the user if the sources are only 1080p or soft.** The output is still 4K,
    but upscaling doesn't add detail.
 4. **Stability scan.** `python tools/shake.py` prints, for each clip, a map of 0.5 s windows:
    `.` steady, `o` usable, `X` too fast or shaky, `b` blurred. Cut only from `.` and short `o` windows.
@@ -51,7 +52,7 @@ variant in `edl.py`), keeps its files in `work/<CUT>/`, and shares the segment c
    For the longer cut, put the extra stable shots in `VARIANTS["tiktok"]["insert_after"]`.
    `python edl.py` prints the timeline.
 6. **Narration (optional).** Write lines for the gaps where nobody talks on camera in `vo/script.json`
-   (`seg`, `off`, `say`, `sub`: [l1, l2, l3]; `|` in l1 marks a manual line break). Then
+   (copy `vo/script.example.json`; fields `id`, `seg`, `off`, `say`, `sub`: [l1, l2, l3]; `|` in l1 marks a manual line break). Then
    `VOICE_ID=… python tools/make_vo.py`. Narration subtitles get a yellow drop shadow and a pink progress
    bar, so viewers can tell them apart from on-camera speech.
 7. **Words on screen.** Edit `content.py`: `HOOK`, `SUBS` (on-camera speech), `TAGS` (local food, places
@@ -60,13 +61,14 @@ variant in `edl.py`), keeps its files in `work/<CUT>/`, and shares the segment c
    are already visible in the shot; explain local things briefly; keep to the safe zones (top 220 px,
    bottom 440 px, right 150 px of the 1080×1920 layout).
 8. **Music & SFX.** Put a track at `assets/music/bgm.wav`, or run `python tools/gen_audio.py` (fal.ai
-   stable-audio; describe regional instruments and bpm). In `tools/mix.py`, set `BGM_IN` so the track's
-   ending lands on the last frame, and set `TARGET_LUFS` to the loudest Short already on the channel.
+   stable-audio; describe regional instruments and bpm). Each variant's `bgm_in` in `edl.py` defaults to
+   auto, so the track's ending lands on the last frame. In `tools/mix.py`, set `TARGET_LUFS` to the loudest
+   Short already on the channel.
 9. **Fonts.** `python tools/get_fonts.py` (Noto Sans TC + Kanit for Thai/Latin). For other languages,
    swap in Noto Sans SC/JP/KR or another script font and set `FONT_MAIN`/`FONT_ALT` in `content.py`.
 10. **Preview.** `python tools/cut.py && python tools/build_overlay.py && python tools/subset_font.py &&
-    python tools/mix.py && python tools/proxy.py`, then `npx hyperframes preview --background` and
-    `npx hyperframes check`. Fix every error before rendering.
+    python tools/mix.py && python tools/proxy.py`, then `npx --yes hyperframes@0.8.141 preview --background`
+    and `npm run check` (same pinned version as the render). Fix every error before rendering.
 11. **Render.** `bash tools/render_all.sh` (all variants), or `bash tools/render_all.sh shorts`. Verify:
     ffprobe shows 2160×3840 at 60/1, the length matches `python edl.py`, loudness hits the target
     (`ffmpeg -i out.mp4 -af ebur128=peak=true -f null -`), and frames grabbed from the hook, a tag and
