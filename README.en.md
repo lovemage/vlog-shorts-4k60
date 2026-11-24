@@ -1,140 +1,101 @@
-<p align="center"><img src="docs/images/hero.jpg" alt="vlog-shorts-4k60" width="100%"></p>
+<p align="center"><img src="docs/images/pov/hero_banner.png" alt="vlog-shorts-4k60 v2 — Real Vlog 4K60 + AI 2D POV Comic" width="100%"></p>
 
-<h1 align="center">vlog-shorts-4k60</h1>
+<h1 align="center">vlog-shorts-4k60 (v2)</h1>
 
 <p align="center">
   <a href="README.md">繁體中文</a> ·
   <b>English</b> ·
-  <a href="README.zh-CN.md">简体中文</a> ·
   <a href="README.ja.md">日本語</a> ·
-  <a href="README.es.md">Español</a>
+  <a href="README.ko.md">한국어</a> ·
+  <a href="README.th.md">ภาษาไทย</a>
 </p>
 
-<p align="center">Turn the phone clips from one outing into sharp <b>4K 60fps vertical vlog Shorts</b>, with 3-language subtitles, local-info cards, narration in your own cloned voice, and loudness-matched music. One edit list gives you both a YouTube Shorts cut and a TikTok cut.</p>
+<p align="center">A <b>dual-mode open-source AI Agent Skill</b> (Xgentrade, Claude Code, Codex, Antigravity, Cursor) for sharp vertical short-form videos:<br><b>Mode A</b> cuts phone clips into <b>4K 60fps 3-language Vlog Shorts</b>; <b>Mode B</b> turns scripts into <b>2D ink-line POV interactive comic animations</b> with zero-extra-GPU bilingual forking for TikTok & YouTube Shorts.</p>
+
+<p align="center"><img src="docs/images/pov/demo_preview.gif" alt="Real EP7 Output Preview" width="260"></p>
 
 ---
 
-## What it is
+## Why This Pipeline Exists (One Golden Rule)
 
-This is a [Claude Code](https://claude.com/claude-code) **skill** and a project template you can run. It scripts the whole editing workflow for phone vlogs of markets, festivals, food trips and travel days:
+Whether you shoot phone vlogs or generate AI 2D animations, routing video footage through a browser renderer or asking AI video models to render subtitles causes **soft video, garbled text, and doubled GPU costs for multi-language publishing**. Both modes enforce one rule:
 
-- 📋 **Shot log**: resolution, fps and content of every clip, plus duplicate detection
-- 🎯 **Shake detection**: camera speed, hand jitter and sharpness for every 0.5 s window, so you only cut from steady footage
-- ✂️ **EDL**: one Python file defines the video, and the Shorts and TikTok cuts share it
-- 🌏 **3-language subtitles and local-info cards** (e.g. Chinese / English / Thai), anchored to segments so captions stay in place when you retime the cut
-- 🎙️ **Narration in your own voice**: optional, using fal.ai MiniMax voice cloning
-- 🎵 **Mix**: separate dialogue, ambience, SFX and BGM buses; the music ducks under speech; two-pass loudnorm matches your channel's level
-- 📝 **Upload text and cover**: place research, a description template, and a cover recipe
+> **Footage (phone clips OR AI video) never goes through the browser, and AI never renders text.** The browser (HyperFrames / Playwright) renders ONLY a transparent RGBA UI/subtitle layer, composited onto high-bitrate footage with `ffmpeg`.
 
-## Why it looks sharper
+| Mode | Best For | Footage Source | Transparent UI Layer | Output |
+|---|---|---|---|---|
+| **Mode A: Real Vlog 4K60** (`template/`) | Markets, festivals, food, travel vlogs | Original phone files via `ffmpeg` lanczos 4K60 + `shake.py` | HyperFrames ProRes 4444 alpha | `2160×3840` 60fps (Shorts + TikTok) |
+| **Mode B: AI 2D POV Comic** (`template_pov_comic/`) | Daily serialized interactive animations | Flow Nano Banana + MiniMax H3 (`17n+5` beat-locked) | Playwright `1080×1920` RGBA PNGs | `1080×1920` 30fps, `-14 LUFS` (Zero-Extra-GPU Bilingual) |
 
-<p align="center"><img src="docs/images/sharp.jpg" alt="Sharpness comparison" width="90%"></p>
+---
 
-HTML-to-video tools (HyperFrames, Remotion, …) screenshot a browser frame by frame and then encode the result. Phone footage that goes this way gets transcoded one extra time, and the 1080p30 default softens it further. So the core rule here is:
+## Mode B (New in v2): AI 2D Ink-Line POV Interactive Comic
 
-> **Footage never goes through the browser.** The browser only draws text and graphics.
+### 1. Separate AI Video from Code-Rendered UI
+AI generates clean, text-free 2D ink-line footage (`unsharp=5:5:0.45` applied to footage ONLY). Playwright renders razor-sharp HUD badges, dual-language subtitles, and interactive voting cards on a transparent layer—zero text blur, 100% editable.
 
-<p align="center"><img src="docs/images/layers.jpg" alt="Three-layer composite" width="90%"></p>
+<p align="center"><img src="docs/images/pov/layer_breakdown.png" alt="AI Video + Code UI Layer Breakdown" width="100%"></p>
 
-| Layer | Made with | Format |
-|---|---|---|
-| Picture | ffmpeg straight from the original files: lanczos upscale to 2160×3840, centre crop, light luma-only unsharp | x264 CRF 12, 60 fps |
-| Graphics (titles, subtitles, cards, end card) | HyperFrames, transparent background, rendered at portrait-4k | ProRes 4444 with alpha, 60 fps |
-| Sound | ffmpeg buses; BGM sidechain-ducked under speech | 48 kHz 24-bit |
-| Delivery | ffmpeg overlay in yuv444, then yuv420p | x264 CRF 14, AAC 320k |
+### 2. Zero-Extra-GPU Bilingual Forking
+One set of AI clips and stills feeds a single `audio/lines.json`. Running `python build.py --all` outputs both **TikTok (`--lang th`)** and **YouTube Shorts (`--lang en`)** with localized dubs, synced timelines, and dual subtitles at **zero extra GPU cost**.
 
-Text is never sharpened or upscaled, and footage is never re-rendered in a browser.
+<p align="center"><img src="docs/images/pov/bilingual_fork.png" alt="Zero Extra GPU Bilingual Forking" width="100%"></p>
+
+### 3. 5-Beat Interactive POV Episode Arc
+0–5s continuity hook paying off last episode's top vote → instant conflict → deadpan comedy beats → cliffhanger → 4s binary choice card (`1` vs `2`).
+
+<p align="center"><img src="docs/images/pov/storyboard_strip.png" alt="5-Beat Interactive POV Episode Arc" width="100%"></p>
+
+### Architecture
 
 ```mermaid
 flowchart LR
-  A[Original phone clips] --> B[shake.py<br>shake / sharpness]
-  B --> C[edl.py<br>edit list]
-  C --> D[cut.py<br>ffmpeg 4K60 picture]
-  C --> E[content.py<br>3-language subtitles / cards]
-  E --> F[build_overlay.py<br>HyperFrames alpha layer]
-  C --> G[mix.py<br>bus mix + loudnorm]
-  V[make_vo.py<br>cloned-voice narration] --> F
-  V --> G
-  D --> H[final.py composite]
-  F --> H
-  G --> H
-  H --> I[Shorts / TikTok 4K60 MP4]
+  subgraph ModeB["Mode B: AI 2D POV Interactive Comic (v2)"]
+    B1["1. Script & Cast<br>audio/lines.json"] --> B2["2. Production Locks<br>prompt_locks.py"]
+    B2 --> B3["3. AI Keyframes & Video<br>Flow / MiniMax H3 (17n+5)"]
+    B1 --> B4["4. Pre-Flight Validator<br>validate.py"]
+    B3 --> B4
+    B4 --> B5["5. Cached TTS + Timeline<br>vo.py -> timeline.json"]
+    B5 --> B6A["6A. Fast Shot Preview<br>preview_shot.py"]
+    B5 --> B6B["6B. Code UI Layer<br>Playwright RGBA"]
+    B3 --> B7["7. Composite & Master<br>CRF 12 + Suno BGM (-14 LUFS)"]
+    B6B --> B7
+    B7 --> B8A["TikTok (--lang th)"]
+    B7 --> B8B["YT Shorts (--lang en)"]
+  end
 ```
 
-## Picking shots
+### Bundled CLI Tools (`template_pov_comic/scripts/`)
 
-<p align="center"><img src="docs/images/shots.jpg" alt="Picking shots" width="90%"></p>
+| Tool | Purpose | Example |
+|---|---|---|
+| `validate.py` | Environment doctor (`--doctor`) & pre-flight checks (`17n+5`, banned words, missing assets) | `python template_pov_comic/scripts/validate.py <ep_dir> --lang th,en` |
+| `prompt_locks.py` | Flow / MiniMax H3 style & character locks + automatic `17n+5` frame snapping | `python template_pov_comic/scripts/prompt_locks.py --frames 8.5` |
+| `preview_shot.py` | Fast single-shot preview (Section-Level Revision in seconds) | `python template_pov_comic/scripts/preview_shot.py <ep_dir> --shot s2a --lang th` |
 
-`tools/shake.py` uses phase correlation to measure frame-to-frame motion and jitter for every 0.5 s window, and Laplacian variance to measure sharpness. It prints one line per clip:
+---
 
+## Mode A: Real Phone Vlog 4K60 (`template/`)
+
+<p align="center"><img src="docs/images/hero.jpg" alt="Mode A Real Vlog 4K60" width="90%"></p>
+
+- `tools/shake.py` stability & sharpness scan (0.5s windows)
+- Single `edl.py` + `content.py` outputting both YouTube Shorts and TikTok 4K60 cuts
+- 3-language subtitles, local-info tags, optional cloned-voice narration (`fal.ai`), sidechain-ducked BGM + 2-pass loudnorm
+
+---
+
+## Quick Install (Xgentrade / Claude Code / Codex / Antigravity / Cursor)
+
+```text
+Install this Skill for me: https://github.com/lovemage/vlog-shorts-4k60
 ```
-01 VID20261112163937.mp4  13.4s | o X X o X . o o o o X X o . X o o X X X ...
-04 VID20261112164137.mp4   1.6s | X o o
-```
-
-`.` steady, `o` usable, `X` too fast or shaky, `b` blurred. Cut only from `.` and short `o` windows.
-
-## Quick start
-
-You need ffmpeg, Python 3.10+ (`pip install opencv-python numpy fonttools`) and Node 20+. A fal.ai key is optional; it's used for narration and music. On macOS/Linux, use `python3` wherever the commands say `python`.
-
-```bash
-# 1. Copy the template next to your clips (the template looks for clips in its parent folder)
-cp -r template/ /path/to/clips/short && cd /path/to/clips/short
-
-# 2. Fonts, source list, shake scan
-python tools/get_fonts.py
-python edl.py --sources
-python tools/shake.py
-
-# 3. Edit edl.py (the cut) and content.py (on-screen text); add assets/music/bgm.wav
-#    (or generate it: FAL_KEY=... python tools/gen_audio.py)
-
-# 4. Optional: narration in your voice
-cp vo/script.example.json vo/script.json   # then write your own lines
-VOICE_ID=your_minimax_voice_id FAL_KEY=... python tools/make_vo.py
-
-# 5. Preview
-python tools/cut.py && python tools/build_overlay.py && python tools/subset_font.py \
-  && python tools/mix.py && python tools/proxy.py
-npx --yes hyperframes@0.8.141 preview
-
-# 6. Render every variant
-bash tools/render_all.sh            # or: bash tools/render_all.sh shorts
-```
-
-The output goes to `renders/<title>_Shorts_4K60.mp4` and `renders/<title>_TikTok_4K60.mp4`.
-
-## Use it as a Claude Code skill
 
 ```bash
 git clone https://github.com/lovemage/vlog-shorts-4k60 ~/.claude/skills/vlog-shorts-4k60
+python ~/.claude/skills/vlog-shorts-4k60/template_pov_comic/scripts/validate.py --doctor
 ```
-
-Then ask Claude something like "cut the clips in this folder into a 4K60 Short with Chinese/English/Thai subtitles". It follows the 12 steps in [`SKILL.md`](SKILL.md): brief → research the place → shot log → shake scan → EDL → narration → captions → music → fonts → preview → render → upload text and cover.
-
-## Layout
-
-```
-SKILL.md                 the workflow, written for Claude
-template/
-  edl.py                 the cut: sources, segments, variants, extra audio
-  content.py             all on-screen text: hook, subtitles, cards, stickers, end card, fonts, colours
-  vo/script.example.json narration script example
-  tools/                 shake / cut / build_overlay / subset_font / mix / proxy / final / render_all
-                         make_vo / gen_audio / fal / get_fonts
-references/
-  research-and-info.md   place research + upload-text template
-  cover.md               cover recipe
-docs/images/             README images
-```
-
-## Safety checks
-
-- `cut.py` stops if a segment's in-point plus its duration runs past the end of its source clip. Otherwise the cut would get shorter without any warning, and every caption and audio cue would drift.
-- `build_overlay.py` warns when subtitles overlap.
-- API keys and voice IDs come from environment variables (or a git-ignored `.env`). `.gitignore` excludes `work/`, `renders/`, the voice cache and `.env`.
 
 ## License
 
-MIT. The default fonts, Noto Sans TC and Kanit, are under the SIL Open Font License; `get_fonts.py` downloads them from google/fonts. The README illustrations were generated with meta/muse-image.
+MIT License

@@ -1,0 +1,26 @@
+{
+  "tempo": 1.12,
+  "tempo_scale": 1.15,
+  "voices": {
+    "you": { "ids": ["YOUR_VOICE_ID"], "speed": 1.2, "emotion": "neutral" },
+    "mentor": { "ids": ["Wise_Woman", "Calm_Woman"], "speed": 1.1, "emotion": "neutral", "tempo": 1.2 }
+  },
+  "lines": [
+    {
+      "id": "a1",
+      "who": "you",
+      "zh": "昨晚你們投票決定直接出海，現在霧突然散開了。",
+      "en": "You voted to set sail at dawn—and now the fog just parted.",
+      "th": "เมื่อคืนพวกนายโหวตให้ออกเรือทันที แล้วตอนนี้หมอกก็เพิ่งจางลง",
+      "emotion": "neutral"
+    },
+    {
+      "id": "a2",
+      "who": "mentor",
+      "zh": "別慌，前面那座鋼鐵城正在把羅盤吸過去。決定吧：硬闖，還是掉頭？",
+      "en": "Steady. That steel city ahead is pulling the compass. Your call: sail in, or turn hard?",
+      "th": "อย่าเพิ่งตกใจ เมืองเหล็กข้างหน้ากำลังดูดเข็มทิศ เลือกมาเลย: บุกเข้าไป หรือหันเรือกลับ?",
+      "emotion": "neutral"
+    }
+  ]
+}

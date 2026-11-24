@@ -1,9 +1,29 @@
 ---
 name: vlog-shorts-4k60
-description: Turn a folder of phone clips from one outing (market, festival, food trip, travel day) into sharp 4K 60fps vertical vlog Shorts with 3-language subtitles, local-info tags, narration in the creator's cloned voice, music and loudness-matched audio, plus the upload text and a cover. Footage is cut by ffmpeg from the original camera files; HyperFrames renders only the transparent graphics layer, which is composited at full resolution. Use for "剪成 Shorts", "做成 vlog", "4K60 短影音", "three-language subtitles", or several cuts (YouTube Shorts + TikTok) from one EDL.
+description: >-
+  Dual-mode AI Agent Skill for sharp vertical short-form videos (TikTok, YouTube Shorts, Reels):
+  (Mode A) Real phone vlog clips to 4K 60fps vertical Shorts with 3-language subtitles, local-info tags,
+  cloned-voice narration, and HyperFrames transparent graphics layer;
+  (Mode B) AI 2D ink-line POV interactive comic animations (1080x1920 30fps, 70-95s) combining
+  Flow / MiniMax H3 (17n+5) with Playwright RGBA HUD/subtitles, zero-extra-GPU bilingual forking
+  (--lang th|en), Suno BGM voice-ducking (-14 LUFS), pre-flight validation, and fast single-shot preview.
+  Use for "剪成 Shorts", "做成 vlog", "4K60 短影音", "POV 漫畫動畫", "雙語互動短影音", or multi-platform cuts.
 ---
 
-# Vlog Shorts 4K60
+# Vlog Shorts 4K60 + POV Comic Director (v2)
+
+Two production modes sharing **one golden rule**:
+
+> **Footage (phone clips OR AI-generated 2D video) never goes through the browser.** The browser (HyperFrames / Playwright) renders ONLY the transparent UI/subtitle/HUD layer, composited at full resolution with `ffmpeg`.
+
+| Mode | Best For | Footage Source | UI Layer | Output |
+|---|---|---|---|---|
+| **Mode A: Real Vlog 4K60** (`template/`) | Travel, markets, food, festivals | Phone clips (`ffmpeg` lanczos 4K60) | HyperFrames ProRes 4444 alpha | `2160×3840` 60fps (`Shorts` + `TikTok`) |
+| **Mode B: AI 2D POV Comic** (`template_pov_comic/`) | Daily serialized POV interactive animations | Flow Nano Banana + MiniMax H3 (`17n+5`) | Playwright `1080×1920` RGBA PNGs | `1080×1920` 30fps, `-14 LUFS` (`--lang th` + `--lang en` from 1 AI render) |
+
+---
+
+## Mode A: Real Phone Vlog 4K60 (`template/`)
 
 Phone clips in → `renders/<title>_Shorts_4K60.mp4` (+ a longer TikTok cut), `影片資訊.txt`, cover.
 
@@ -102,4 +122,36 @@ template/
 references/
   research-and-info.md   place research + 影片資訊 template
   cover.md               cover recipe
+  pov-comic-pipeline.md  Mode B full AI 2D POV comic production runbook
+  pov-script-rules.md    Mode B interactive POV storytelling rules
+  pov-character-bible.md Mode B character lock & voice profile template
+template_pov_comic/
+  build.py               one-click dual-language builder (--all / --lang / --shot / --validate-only)
+  audio/lines.example.json
+  scripts/
+    validate.py          environment doctor + pre-flight episode validator (17n+5, banned words, assets)
+    prompt_locks.py      Production Locks for Flow / MiniMax H3 + automatic 17n+5 frame snapping
+    preview_shot.py      fast single-shot preview (Section-Level Revision)
 ```
+
+---
+
+## Mode B: AI 2D Ink-Line POV Interactive Comic (`template_pov_comic/`)
+
+For daily serialized 2D ink-line POV animations (`1080×1920`, `30 fps`, `70–95s`, `-14 LUFS`) where viewer comments decide the next episode. Full technical details in `references/pov-comic-pipeline.md`.
+
+### Why This Architecture
+1. **Zero Text Blur**: AI models generate clean, text-free 2D ink-line footage (`unsharp=5:5:0.45` on footage ONLY); Playwright renders razor-sharp dual-language subtitles, HUD badges, and interactive choice cards onto a transparent RGBA layer.
+2. **Zero-Extra-GPU Bilingual Forking**: Generate AI keyframes and H3 video clips **once**, then fork `--lang th` (TikTok: Thai dub + TH/EN subs) and `--lang en` (YouTube Shorts: EN dub + ZH/EN subs) from the same `audio/lines.json`.
+3. **Production Locks & Pre-Flight Guardrails**: Enforce `17n+5` H3 frame counts, deadpan expressions, outfit consistency, and platform word filters before spending GPU/TTS credits.
+4. **Section-Level Preview**: Audition a single `@shot` (video + overlay + VO + ambient + BGM) in seconds instead of re-rendering the entire episode.
+
+### Mode B Workflow
+1. **Doctor**: `python template_pov_comic/scripts/validate.py --doctor`
+2. **Script & Cast**: Follow `references/pov-script-rules.md` and `references/pov-character-bible.md` → write `<ep_dir>/audio/lines.json` (0–5s vote-payoff hook → deadpan comedy beats → cliffhanger → 4s binary choice card).
+3. **Production Locks & Keyframes**: Use `python template_pov_comic/scripts/prompt_locks.py --mode flow ...` to generate a panoramic establishing sheet first, then props (`props/`) and per-shot first frames (`h3/in/`, `stills_src/`).
+4. **AI Video (`17n+5` Beat-Locked)**: Snap target durations with `python template_pov_comic/scripts/prompt_locks.py --frames <sec>` and queue MiniMax H3 clips with timed beats (`0–3s: ...; 3–6s: ...`), small camera motion, anti-drift ending lock, and `No speech, no voices, no singing, no music, no text, no subtitles`. Save to `h3/out/<shot>.mp4`.
+5. **Pre-Flight Validate**: `python template_pov_comic/scripts/validate.py <ep_dir> --lang th,en`
+6. **Single-Shot Preview**: `python template_pov_comic/scripts/preview_shot.py <ep_dir> --shot s2a --lang th`
+7. **Full Dual-Language Build**: `cd <ep_dir> && python build.py --all` → outputs `partN_th.mp4` + `partN_en.mp4` (`CRF 12`, `-14 LUFS`, Suno BGM voice-ducking).
+8. **Cover Safe Zone**: Keep all cover titles and faces within the **3:4 vertical safe zone (15%–85% height)**; no camera branding (`Shot on ...`).

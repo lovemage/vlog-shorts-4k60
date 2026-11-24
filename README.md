@@ -1,49 +1,88 @@
-<p align="center"><img src="docs/images/hero.jpg" alt="vlog-shorts-4k60" width="100%"></p>
+<p align="center"><img src="docs/images/pov/hero_banner.png" alt="vlog-shorts-4k60 v2 — Real Vlog 4K60 + AI 2D POV Comic" width="100%"></p>
 
-<h1 align="center">vlog-shorts-4k60</h1>
+<h1 align="center">vlog-shorts-4k60 (v2)</h1>
 
 <p align="center">
   <b>繁體中文</b> ·
   <a href="README.en.md">English</a> ·
-  <a href="README.zh-CN.md">简体中文</a> ·
   <a href="README.ja.md">日本語</a> ·
-  <a href="README.es.md">Español</a>
+  <a href="README.ko.md">한국어</a> ·
+  <a href="README.th.md">ภาษาไทย</a>
 </p>
 
-<p align="center">把一次出遊拍的手機素材，剪成清晰的 <b>4K 60fps 直式 vlog Shorts</b>：三語字幕、在地說明卡、本人聲音的 AI 旁白、配樂與音量對齊，一次輸出 YouTube Shorts 和 TikTok 兩個版本。</p>
+<p align="center">一套給所有 AI Agent（Xgentrade、Claude Code、Codex、Antigravity、Cursor）使用的<b>雙模式直式短影音製作 Skill</b>：<br><b>模式 A</b> 把手機實拍素材剪成 <b>4K 60fps 三語 Vlog Shorts</b>；<b>模式 B</b> 把劇本做成 <b>2D 墨線漫畫 POV 互動短影音</b>，一套 AI 畫面零額外算圖成本同時輸出 TikTok 與 YouTube Shorts 雙語版本。</p>
+
+<p align="center"><img src="docs/images/pov/demo_preview.gif" alt="實際 EP7 成品動態預覽" width="260"></p>
 
 ---
 
-## 這是什麼
+## 為什麼要這樣做？（核心原則）
 
-這是一個 [Claude Code](https://claude.com/claude-code) **skill**，也是一套可以直接執行的專案範本。它把「市集、祭典、美食、旅遊日」這類手機 vlog 的剪輯流程寫成腳本：
+不管是實拍手機 Vlog 還是 AI 生成的 2D 動畫，只要直接把畫面丟進瀏覽器（Remotion / HyperFrames）或讓 AI 影片模型直接畫字幕，就會遇到**畫面變糊、文字亂碼、多語重算成本翻倍**。所以這套 Skill 的兩大模式共用同一條鐵則：
 
-- 📋 **素材分析**：逐支讀取解析度、幀率和內容，找出重複鏡頭
-- 🎯 **晃動偵測**：以每 0.5 秒為一格，算出鏡頭移動速度、手震和清晰度，只用穩定的片段
-- ✂️ **EDL 剪輯表**：用一個 Python 檔定義整支影片，Shorts 和 TikTok 兩版共用
-- 🌏 **三語字幕與在地說明卡**：例如中／英／泰，字幕和說明卡都掛在片段上，改剪輯時不會跑位
-- 🎙️ **本人聲音旁白**：選用 fal.ai MiniMax 的聲音複製
-- 🎵 **混音**：對白、環境音、音效、BGM 分軌處理，BGM 遇到人聲自動壓低，兩段式 loudnorm 對齊頻道音量
-- 📝 **上傳文案與封面**：地點研究、說明欄範本、封面做法
+> **底層畫面（手機原始檔或 AI 影片）永遠不經過瀏覽器，也不讓 AI 畫字。** 瀏覽器只負責渲染透明背景的銳利 UI、雙語／三語字幕與互動選擇卡，最後再用 `ffmpeg` 高畫質疊合。
 
-## 為什麼畫質比較清楚
+| 模式 | 適用情境 | 底層畫面 | 透明 UI 圖層 | 成品規格 |
+|---|---|---|---|---|
+| **模式 A：實拍 Vlog 4K60**（`template/`） | 市集、祭典、美食、旅遊 Vlog | 手機原檔 `ffmpeg` lanczos 4K60 + `shake.py` 晃動過濾 | HyperFrames ProRes 4444 alpha | `2160×3840` 60fps（Shorts＋TikTok 雙剪輯） |
+| **模式 B：AI 2D 漫畫 POV 動畫**（`template_pov_comic/`） | 日更互動連載短影音（觀眾留言決定下一集） | Flow Nano Banana + MiniMax H3（`17n+5` 逐秒節拍） | Playwright `1080×1920` RGBA 透明圖層 | `1080×1920` 30fps、`-14 LUFS`（零額外 GPU 雙語分流） |
 
-<p align="center"><img src="docs/images/sharp.jpg" alt="清晰度比較" width="90%"></p>
+---
 
-HTML 轉影片的工具（HyperFrames、Remotion 等）都是「瀏覽器逐格截圖再編碼」。手機素材走這條路會多一次轉碼，預設的 1080p30 又會讓畫面更糊。所以這套流程的核心規則是：
+## 模式 B（v2 新增）：AI 2D 墨線漫畫 POV 互動短影音
 
-> **素材永遠不經過瀏覽器。** 瀏覽器只負責畫文字和圖卡。
+### 1. 為什麼把 AI 畫面與程式化 UI 徹底分離？
+AI 影片模型負責「乾淨無字的 2D 墨線動態」；字幕、HUD 膠囊、角色色標與投票卡全由 HTML/CSS + Playwright 逐幀輸出透明 PNG 再疊合。銳化（`unsharp=5:5:0.45`）**只加在 AI 素材上**，文字永遠 100% 銳利，改台詞也不必重算影片。
 
-<p align="center"><img src="docs/images/layers.jpg" alt="三層合成" width="90%"></p>
+<p align="center"><img src="docs/images/pov/layer_breakdown.png" alt="AI 畫面與程式化 UI 分層合成示意圖" width="100%"></p>
 
-| 圖層 | 用什麼做 | 格式 |
+### 2. 為什麼一套 AI 畫面能零成本輸出雙語版本？
+全片時間軸、字幕、配音與 BGM 都讀同一份 `audio/lines.json`。AI 首幀與影片只需算一次，執行 `python build.py --all` 就能同時產出 **TikTok 泰語版（泰語配音＋泰大英小）** 與 **YouTube Shorts 英語版（英語配音＋中大英小）**，**零額外 GPU 算圖成本**。
+
+<p align="center"><img src="docs/images/pov/bilingual_fork.png" alt="零額外 GPU 雙語分流架構" width="100%"></p>
+
+### 3. 高留存 5 拍互動敘事結構
+開頭 0–5 秒承接上集觀眾最高票留言 → 衝突爆發 → 冷面黑色幽默梗 → 高張力懸念 → 4 秒二選一投票卡（`1` vs `2`），讓留言自動推動隔天劇本。
+
+<p align="center"><img src="docs/images/pov/storyboard_strip.png" alt="五拍互動 POV 動畫分鏡節奏" width="100%"></p>
+
+### 完整自動化架構（Mermaid）
+
+```mermaid
+flowchart LR
+  subgraph ModeB["模式 B：AI 2D 漫畫 POV 互動動畫 (v2)"]
+    B1["1. 劇本與台詞<br>audio/lines.json"] --> B2["2. 視覺鎖定模板<br>prompt_locks.py"]
+    B2 --> B3["3. AI 首幀與影片<br>Flow / MiniMax H3 (17n+5)"]
+    B1 --> B4["4. 開跑前防呆檢查<br>validate.py"]
+    B3 --> B4
+    B4 --> B5["5. 快取配音與時間軸<br>vo.py -> timeline.json"]
+    B5 --> B6A["6A. 單鏡快速預覽<br>preview_shot.py"]
+    B5 --> B6B["6B. 透明 UI 圖層<br>Playwright RGBA"]
+    B3 --> B7["7. 合成與混音母帶<br>CRF 12 + Suno BGM (-14 LUFS)"]
+    B6B --> B7
+    B7 --> B8A["TikTok 版 (--lang th)"]
+    B7 --> B8B["YT Shorts 版 (--lang en)"]
+  end
+```
+
+### 模式 B 內建效率工具（`template_pov_comic/scripts/`）
+
+| 工具 | 用途 | 範例指令 |
 |---|---|---|
-| 畫面 | ffmpeg 直接讀原始檔：lanczos 放大到 2160×3840、置中裁切、只對亮度做輕微銳化 | x264 CRF 12、60 fps |
-| 圖層（標題、字幕、說明卡、資訊卡） | HyperFrames，透明背景，直接以 portrait-4k 輸出 | ProRes 4444 帶 alpha、60 fps |
-| 聲音 | ffmpeg 分軌混音，BGM 依人聲 sidechain 壓低 | 48 kHz 24-bit |
-| 成品 | ffmpeg 先以 yuv444 疊合，最後轉 yuv420p | x264 CRF 14、AAC 320k |
+| `validate.py` | 環境檢查（`--doctor`）與開跑前防呆（檢查 `lines.json`、H3 `17n+5` 幀數、禁詞、缺檔） | `python template_pov_comic/scripts/validate.py <ep_dir> --lang th,en` |
+| `prompt_locks.py` | Flow / MiniMax H3 畫風與角色鎖定產生器＋自動對齊 `17n+5` 合法幀數 | `python template_pov_comic/scripts/prompt_locks.py --frames 8.5` |
+| `preview_shot.py` | 單鏡局部預覽（只渲染 1 個鏡頭的透明 UI＋配音＋BGM，數秒驗收） | `python template_pov_comic/scripts/preview_shot.py <ep_dir> --shot s2a --lang th` |
 
-文字不會被銳化，也不會被放大，畫面也不會經過瀏覽器重新渲染。
+---
+
+## 模式 A（原有功能）：手機實拍 4K 60fps 三語 Vlog Shorts
+
+<p align="center"><img src="docs/images/hero.jpg" alt="模式 A 實拍 4K60 Vlog Shorts" width="90%"></p>
+
+- 📋 **素材分析與晃動偵測（`tools/shake.py`）**：每 0.5 秒評估手震與清晰度，只取穩定片段。
+- ✂️ **EDL 剪輯表（`edl.py`）**：一份定義同時輸出 Shorts 與較長的 TikTok 版本。
+- 🌏 **三語字幕＋在地說明卡（`content.py`）**：中／英／泰字幕掛在片段上，改剪輯不跑位。
+- 🎙️ **本人聲音旁白＋分軌混音**：fal.ai 聲音複製＋BGM sidechain 閃避＋兩段式 loudnorm。
 
 ```mermaid
 flowchart LR
@@ -61,80 +100,23 @@ flowchart LR
   H --> I[Shorts／TikTok 4K60 MP4]
 ```
 
-## 挑鏡頭
+---
 
-<p align="center"><img src="docs/images/shots.jpg" alt="挑鏡頭" width="90%"></p>
+## 快速安裝（Agent Skill / Xgentrade / Claude Code / Codex / Antigravity）
 
-`tools/shake.py` 用相位相關法算出每 0.5 秒的畫面位移速度和手震程度，再用 Laplacian 變異數判斷清晰度，每支素材印成一行：
+直接對你的 AI Agent 說：
 
-```
-01 VID20261112163937.mp4  13.4s | o X X o X . o o o o X X o . X o o X X X ...
-04 VID20261112164137.mp4   1.6s | X o o
-```
-
-`.` 穩定、`o` 可用、`X` 太快或太晃、`b` 模糊。只從 `.` 和短的 `o` 段落取鏡頭。
-
-## 快速開始
-
-需要：ffmpeg、Python 3.10 以上（`pip install opencv-python numpy fonttools`）、Node 20 以上。旁白和配樂需要 fal.ai key，可選。macOS／Linux 請把指令中的 `python` 換成 `python3`。
-
-```bash
-# 1. 把範本複製到素材資料夾裡（預設素材在上一層）
-cp -r template/ /path/to/clips/short && cd /path/to/clips/short
-
-# 2. 字型、素材表、晃動分析
-python tools/get_fonts.py
-python edl.py --sources
-python tools/shake.py
-
-# 3. 編輯 edl.py（剪輯表）和 content.py（畫面上的字），放入 assets/music/bgm.wav
-#    （或用 FAL_KEY=... python tools/gen_audio.py 生成）
-
-# 4. 選用：本人聲音旁白
-cp vo/script.example.json vo/script.json   # 再改成你自己的旁白稿
-VOICE_ID=your_minimax_voice_id FAL_KEY=... python tools/make_vo.py
-
-# 5. 預覽
-python tools/cut.py && python tools/build_overlay.py && python tools/subset_font.py \
-  && python tools/mix.py && python tools/proxy.py
-npx --yes hyperframes@0.8.141 preview
-
-# 6. 輸出所有版本
-bash tools/render_all.sh            # 或: bash tools/render_all.sh shorts
+```text
+幫我安裝這個 Skill：https://github.com/lovemage/vlog-shorts-4k60
 ```
 
-成品在 `renders/<title>_Shorts_4K60.mp4` 和 `renders/<title>_TikTok_4K60.mp4`。
-
-## 當作 Claude Code skill 使用
+或手動 clone 到本機 Skills 目錄：
 
 ```bash
 git clone https://github.com/lovemage/vlog-shorts-4k60 ~/.claude/skills/vlog-shorts-4k60
+python ~/.claude/skills/vlog-shorts-4k60/template_pov_comic/scripts/validate.py --doctor
 ```
-
-之後對 Claude 說「把這個資料夾的素材剪成 4K60 Shorts，中英泰字幕」，它就會照 [`SKILL.md`](SKILL.md) 的 12 個步驟進行：brief → 研究地點 → 素材分析 → 晃動偵測 → 剪輯表 → 旁白 → 字幕 → 配樂 → 字型 → 預覽 → 輸出 → 文案與封面。
-
-## 專案結構
-
-```
-SKILL.md                 給 Claude 的工作流程
-template/
-  edl.py                 剪輯表：素材、片段、版本、額外音軌
-  content.py             畫面上所有文字：hook、字幕、說明卡、貼紙、資訊卡、字型、配色
-  vo/script.example.json 旁白稿範例
-  tools/                 shake / cut / build_overlay / subset_font / mix / proxy / final / render_all
-                         make_vo / gen_audio / fal / get_fonts
-references/
-  research-and-info.md   地點研究與影片資訊範本
-  cover.md               封面做法
-docs/images/             README 圖片
-```
-
-## 防呆
-
-- `cut.py` 會先檢查每個片段的入點加長度有沒有超過素材本身的長度。超過的話整支影片會悄悄變短，字幕和音軌也會全部錯位。
-- `build_overlay.py` 會警告重疊的字幕。
-- 金鑰和聲音 ID 從環境變數（或已被 gitignore 的 `.env`）讀取，`.gitignore` 已經排除 `work/`、`renders/`、旁白快取和 `.env`。
 
 ## 授權
 
-MIT。預設字型 Noto Sans TC 和 Kanit 採用 SIL Open Font License，由 `get_fonts.py` 從 google/fonts 下載。README 插圖以 meta/muse-image 生成。
+MIT License © OceanAds / lovemage
